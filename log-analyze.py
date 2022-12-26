@@ -13,6 +13,7 @@ def access_handler():
         with open('/var/log/apache2/access.log') as fp:  # doctest: +SKIP
             for entry in parser_access.parse_lines(fp):
                 # print(times[str(entry.request_time_fields["timestamp"])])
+                print(entry.request_time_fields["timestamp"].tzinfo)
                 if not last_time:
                     last_time = str(entry.request_time_fields["timestamp"])
                     times[last_time] = {}
