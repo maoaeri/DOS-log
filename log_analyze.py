@@ -4,6 +4,7 @@ import time, os
 TIME_WAIT = 5
 times = {}
 MAX = 0
+errors = []
 #192.168.126.1 - - [25/Dec/2022:12:13:36 +0700] "GET /icons/ubuntu-logo.png HTTP/1.1" 200 3607 
 # "http://192.168.126.132/index.html" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
 # Chrome/108.0.0.0 Safari/537.36"
@@ -38,6 +39,24 @@ def access_handler():
                 times[str(field)] = 1
             if times[str(field)] > MAX:
                 MAX = times[str(field)]
+
+def error_handler():
+    parser_error = LogParser('[%t] [%{type}x] [pid %{pid}P:tid %{tid}P] [client %h] '
+                            '[client %a] ModSecurity: %{error_content}x [file "%{file}x"] [line "%{line}x"] '
+                            '[id "%{line}x"] [msg "%{msg}x"] [ver "%{ver}x"] %{tags}x [hostname "%{hostname}x"] '
+                            '[uri "%U"] [unique_id "%{unique_id}x"]')
+
+    with open('/var/log/apache2/error.log') as file:
+        # st_results = os.stat('/var/log/apache2/error.log')
+        # st_size = st_results[6]
+        # file.seek(st_size)
+        # for entry1 in parser_error1.parse_lines(fp):
+        #     print(str(entry1.variables['time']))
+        #     if str(entry1.variables['type']) == ':error':  # doctest: +SKIP
+        for entry in parser_error.parse_lines(file, ignore_invalid=True):
+            print(str(entry.request_time_fields["timestamp"].strftime("%H:%M:%S")),  str(entry.variables['msg']))
+
+error_handler()
             # if (entry.request_time_fields["timestamp"] - time).total_seconds() > 0:
                 # print("hehe")
                 # return 1
@@ -83,16 +102,6 @@ parser_error1 = LogParser('[%{time}x] [%{type}x] %{ahihi}x')
 #                         '[client %h] ModSecurity: %{error_content}x [file "%{file}x"] [line "%{line}x"] ' 
 #                         '[id "%{line}x"] [msg "%{msg}x"] [ver "%{ver}x"] %{tags}x [hostname "%{hostname}x"] '
 #                         '[uri "%U"] [unique_id "%{unique_id}x"]')
-parser_error = LogParser('[%{time}x] [%{type}x] [pid %{pid}P:tid %{tid}P] [client %h] '
-                        '[client %a] ModSecurity: %{error_content}x [file "%{file}x"] [line "%{line}x"] '
-                        '[id "%{line}x"] [msg "%{msg}x"] [ver "%{ver}x"] %{tags}x [hostname "%{hostname}x"] '
-                        '[uri "%U"] [unique_id "%{unique_id}x"]')
 
-# with open('/var/log/apache2/error.log.1') as fp:
-#     # for entry1 in parser_error1.parse_lines(fp):
-#     #     print(str(entry1.variables['time']))
-#     #     if str(entry1.variables['type']) == ':error':  # doctest: +SKIP
-#     for entry in parser_error.parse_lines(fp, ignore_invalid=True):
-#         print(str(entry.variables['time']),  str(entry.variables['msg']))
 
 # access_handler()
