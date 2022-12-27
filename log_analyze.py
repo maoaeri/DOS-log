@@ -2,6 +2,8 @@ from apachelogs import LogParser
 import time, os
 
 TIME_WAIT = 5
+times = {}
+MAX = 0
 #192.168.126.1 - - [25/Dec/2022:12:13:36 +0700] "GET /icons/ubuntu-logo.png HTTP/1.1" 200 3607 
 # "http://192.168.126.132/index.html" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) 
 # Chrome/108.0.0.0 Safari/537.36"
@@ -11,39 +13,50 @@ def read_file_line(file):
         where = file.tell()
         line = file.readline()
         if not line:
-            print('Waiting...')
+            # print('Waiting...')
             time.sleep(1)
             file.seek(where)
         else:
             return line
 
 def access_handler():
+    global times, MAX
     parser_access = LogParser("%a %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"")
     last_time = None
-    while True:
-        times = {}
-        with open('/var/log/apache2/access.log') as file:
-            st_results = os.stat('/var/log/apache2/access.log')
-            st_size = st_results[6]
-            file.seek(st_size)
-            while True:  # doctest: +SKIP
-                entry = parser_access.parse(read_file_line(file))
-                # print(times[str(entry.request_time_fields["timestamp"])])
-                print(entry.request_time_fields["timestamp"].tzinfo)
-                if not last_time:
-                    last_time = str(entry.request_time_fields["timestamp"])
-                    times[last_time] = {}
-                if last_time != str(entry.request_time_fields["timestamp"]):
-                    times[str(entry.request_time_fields["timestamp"])] = {}
-                print(str(last_time))
-                if entry.remote_address in times[str(entry.request_time_fields["timestamp"])]:
-                    times[str(entry.request_time_fields["timestamp"])][entry.remote_address] += 1
-                else:
-                    times[str(entry.request_time_fields["timestamp"])][entry.remote_address] = 0
-                print(f"\t{entry.remote_address}: "+ str(times[last_time][entry.remote_address]))
-                last_time = str(entry.request_time_fields["timestamp"])
+    # while True:
+    #     times = {}
+    with open('/var/log/apache2/access.log') as file:
+        st_results = os.stat('/var/log/apache2/access.log')
+        st_size = st_results[6]
+        file.seek(st_size)
+        while True:  # doctest: +SKIP
+            entry = parser_access.parse(read_file_line(file))
+            field = entry.request_time_fields["timestamp"].strftime("%H:%M:%S")
+            if str(field) in times:
+                times[str(field)] += 1
+            else:
+                times[str(field)] = 1
+            if times[str(field)] > MAX:
+                MAX = times[str(field)]
+            # if (entry.request_time_fields["timestamp"] - time).total_seconds() > 0:
+                # print("hehe")
+                # return 1
+            # print(times[str(entry.request_time_fields["timestamp"])])
+            # print(entry.request_time_fields["timestamp"].tzinfo)
+            # if not last_time:
+            #     last_time = str(entry.request_time_fields["timestamp"])
+            #     times[last_time] = {}
+            # if last_time != str(entry.request_time_fields["timestamp"]):
+            #     times[str(entry.request_time_fields["timestamp"])] = {}
+            # print(str(last_time))
+            # if entry.remote_address in times[str(entry.request_time_fields["timestamp"])]:
+            #     times[str(entry.request_time_fields["timestamp"])][entry.remote_address] += 1
+            # else:
+            #     times[str(entry.request_time_fields["timestamp"])][entry.remote_address] = 0
+            # print(f"\t{entry.remote_address}: "+ str(times[last_time][entry.remote_address]))
+            # last_time = str(entry.request_time_fields["timestamp"])
             # print(str(entry.request_time), entry.request_line)
-            time.sleep(TIME_WAIT)
+            # time.sleep(TIME_WAIT)
 
 
 
@@ -82,4 +95,4 @@ parser_error = LogParser('[%{time}x] [%{type}x] [pid %{pid}P:tid %{tid}P] [clien
 #     for entry in parser_error.parse_lines(fp, ignore_invalid=True):
 #         print(str(entry.variables['time']),  str(entry.variables['msg']))
 
-access_handler()
+# access_handler()
