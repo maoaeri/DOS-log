@@ -1,5 +1,6 @@
 from apachelogs import LogParser
 import time, os
+from datetime import datetime
 
 TIME_WAIT = 5
 times = {}
@@ -26,12 +27,12 @@ def access_handler():
     last_time = None
     # while True:
     #     times = {}
-    with open('/var/log/apache2/access.log') as file:
+    with open('/var/log/apache2/access.log') as file1:
         st_results = os.stat('/var/log/apache2/access.log')
         st_size = st_results[6]
-        file.seek(st_size)
+        file1.seek(st_size)
         while True:  # doctest: +SKIP
-            entry = parser_access.parse(read_file_line(file))
+            entry = parser_access.parse(read_file_line(file1))
             field = entry.request_time_fields["timestamp"].strftime("%H:%M:%S")
             if str(field) in times:
                 times[str(field)] += 1
@@ -40,23 +41,47 @@ def access_handler():
             if times[str(field)] > MAX:
                 MAX = times[str(field)]
 
-def error_handler():
-    parser_error = LogParser('[%t] [%{type}x] [pid %{pid}P:tid %{tid}P] [client %h] '
+#[Wed Dec 14 07:58:20.919155 2022] [:error] [pid 2754:tid 140013417801280] [client 192.168.126.1:64635] 
+# [client 192.168.126.1] ModSecurity: Warning. Operator GE matched 2 at IP:dos_burst_counter. 
+# [file "/etc/apache2/modsecurity-crs/coreruleset-3.3.0/rules/custom-dos.conf"] [line "1426"] 
+# [id "912170"] [msg "Potential Denial of Service (DoS) Attack from 192.168.126.1 - # of Request Bursts: 2"] 
+# [ver "OWASP_CRS/3.3.0"] [tag "application-multi"] [tag "language-multi"] [tag "platform-multi"] 
+# [tag "paranoia-level/1"] [tag "attack-dos"] [tag "OWASP_CRS"] [tag "capec/1000/210/227/469"] 
+# [hostname "192.168.126.132"] [uri "/index.html"] [unique_id "Y5kfrCuIlX__lXF0SSnuOgAAAQU"]
+def error_handler(): #%a %b %d %H:%M:%S.%f %Y
+    parser_error = LogParser('[%{strtime}x] [%{type}x] [pid %{pid}P:tid %{tid}P] [client %h] '
                             '[client %a] ModSecurity: %{error_content}x [file "%{file}x"] [line "%{line}x"] '
                             '[id "%{line}x"] [msg "%{msg}x"] [ver "%{ver}x"] %{tags}x [hostname "%{hostname}x"] '
                             '[uri "%U"] [unique_id "%{unique_id}x"]')
 
-    with open('/var/log/apache2/error.log') as file:
-        # st_results = os.stat('/var/log/apache2/error.log')
-        # st_size = st_results[6]
-        # file.seek(st_size)
+    time_format = "%a %b %d %H:%M:%S.%f %Y"
+    global errors
+
+    with open('/var/log/apache2/error.log') as file2:
+        st_results = os.stat('/var/log/apache2/error.log')
+        st_size = st_results[6]
+        file2.seek(st_size)
         # for entry1 in parser_error1.parse_lines(fp):
         #     print(str(entry1.variables['time']))
         #     if str(entry1.variables['type']) == ':error':  # doctest: +SKIP
-        for entry in parser_error.parse_lines(file, ignore_invalid=True):
-            print(str(entry.request_time_fields["timestamp"].strftime("%H:%M:%S")),  str(entry.variables['msg']))
-
-error_handler()
+        while True:
+            try:
+                entry = parser_error.parse(read_file_line(file2))
+            except Exception as e:
+                continue
+            entry_time = datetime.strptime(entry.variables["strtime"], time_format)
+            if len(errors) < 5:
+                errors.append(f"{entry_time.strftime('%H:%M:%S.%f')}: {entry.variables['msg']}")
+            else:
+                errors.pop(0)
+                errors.append(f"{entry_time.strftime('%H:%M:%S.%f')}: {entry.variables['msg']}")
+            # if "Invalid" in entry.variables['msg']:
+            #     print(f"{entry_time.strftime('%H:%M:%S.%f')}: {entry.variables['msg']}")
+            time.sleep(0.01)
+            # print(str(entry_time))
+        # for entry in parser_error.parse_lines(file2, ignore_invalid=True):
+            # print(str(entry.request_time_fields["timestamp"].strftime("%H:%M:%S")),  str(entry.variables['msg']))
+# error_handler()
             # if (entry.request_time_fields["timestamp"] - time).total_seconds() > 0:
                 # print("hehe")
                 # return 1
@@ -79,13 +104,7 @@ error_handler()
 
 
 
-#[Wed Dec 14 07:58:20.919155 2022] [:error] [pid 2754:tid 140013417801280] [client 192.168.126.1:64635] 
-# [client 192.168.126.1] ModSecurity: Warning. Operator GE matched 2 at IP:dos_burst_counter. 
-# [file "/etc/apache2/modsecurity-crs/coreruleset-3.3.0/rules/custom-dos.conf"] [line "1426"] 
-# [id "912170"] [msg "Potential Denial of Service (DoS) Attack from 192.168.126.1 - # of Request Bursts: 2"] 
-# [ver "OWASP_CRS/3.3.0"] [tag "application-multi"] [tag "language-multi"] [tag "platform-multi"] 
-# [tag "paranoia-level/1"] [tag "attack-dos"] [tag "OWASP_CRS"] [tag "capec/1000/210/227/469"] 
-# [hostname "192.168.126.132"] [uri "/index.html"] [unique_id "Y5kfrCuIlX__lXF0SSnuOgAAAQU"]
+
 # parser_error1 = LogParser('[%{%a %b %d %T %g}t] [:%{type}x] %{ahihi}x')
 parser_error1 = LogParser('[%{time}x] [%{type}x] %{ahihi}x')
 

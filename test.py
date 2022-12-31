@@ -22,12 +22,14 @@ def draw_plot():
     # for i in range(frames):
     while True:
         # y = np.sin(n * f * x + 2 * np.pi / frames * i)
-        # print(datetime.now(), log_analyze.times)
+        for i in range(len(log_analyze.errors)):
+            print(log_analyze.errors[i])
         time_now = datetime.now()
         y.pop(0)
         y.append(log_analyze.times.get((time_now - timedelta(seconds=1)).strftime("%H:%M:%S"), 0))
         plt.clear_terminal()
         plt.clear_data()
+
         xlabels.pop(0)
         xlabels.append((time_now - timedelta(seconds=1)).strftime("%H:%M:%S"))
         plt.plot(x, y)
@@ -45,9 +47,12 @@ if __name__ == "__main__":
     t1 = threading.Thread(target=log_analyze.access_handler)
     # time.sleep(1)
     t2 = threading.Thread(target=draw_plot)
+    t3 = threading.Thread(target=log_analyze.error_handler)
     t1.start()
+    t3.start()
     time.sleep(2)
 
     t2.start()
     t1.join()
     t2.join()
+    t3.join()
