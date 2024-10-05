@@ -6,22 +6,14 @@ import log_analyze
 import threading, time
 
 def draw_plot():
-    # n = 2
-    # frames = 18
-    # l = 30 * frames
-    # f = 2 * np.pi / l
 
     x = np.arange(0, 19)
     n = 20
-    # xticks = np.arange(0, l + l / (2 * n), l / (2 * n))
     time_now = datetime.now()
     xticks = np.arange(0, n - 1, 1)
     xlabels = [str((time_now - timedelta(seconds=i)).strftime("%H:%M:%S")) for i in range(n+1, 1, -1)]
     y = [0]*n
-    # xlabels = [str(i) + "π" for i in range(2*(n+1))]
-    # for i in range(frames):
     while True:
-        # y = np.sin(n * f * x + 2 * np.pi / frames * i)
         for i in range(len(log_analyze.errors)):
             print(log_analyze.errors[i])
         time_now = datetime.now()
@@ -35,7 +27,7 @@ def draw_plot():
         plt.plot(x, y)
         plt.ylim(0, max(y) + 10)
         # plt.canvas_size(150, 40)
-        plt.title("plotting streaming data using plotext")
+        plt.title("Plotting incoming requests")
         plt.ticks_color("blue")
         plt.xticks(xticks, xlabels)
         plt.sleep(1)
@@ -43,7 +35,6 @@ def draw_plot():
 
 if __name__ == "__main__":
 
-    print("hi")
     t1 = threading.Thread(target=log_analyze.access_handler)
     # time.sleep(1)
     t2 = threading.Thread(target=draw_plot)
